@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Console</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface-mid: #0f1929;
+      --surface-card: #141414;
+      --surface-card-2: #1c1c1c;
+      --accent: #3b82f6;
+      --border: #1f2937;
+      --text-primary: #f9fafb;
+      --text-secondary: #6b7280;
+      --amber: #f59e0b;
+      --green: #22c55e;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 52px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 24px;
+      z-index: 100;
+    }
+
+    .wordmark { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+    .wordmark span { color: var(--accent); }
+
+    .tab-nav { display: flex; gap: 2px; flex: 1; }
+
+    .tab-btn {
+      background: none; border: none; color: var(--text-secondary);
+      font-size: 13px; font-weight: 500; padding: 6px 12px;
+      cursor: pointer; border-radius: 6px;
+      transition: color 0.12s, background 0.12s; white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+    .tab-btn.active { color: var(--accent); background: rgba(59,130,246,0.1); }
+
+    .main { margin-top: 52px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: flex; }
+
+    .dag-layout { display: flex; min-height: calc(100vh - 52px); width: 100%; }
+
+    .dag-sidebar {
+      width: 172px; min-width: 172px;
+      border-right: 1px solid var(--border);
+      padding: 20px 10px; background: var(--bg);
+      position: sticky; top: 52px;
+      height: calc(100vh - 52px); overflow-y: auto;
+    }
+
+    .sidebar-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-secondary);
+      padding: 0 8px; margin-bottom: 8px;
+    }
+
+    .sub-btn {
+      display: block; width: 100%; background: none; border: none;
+      text-align: left; color: var(--text-secondary);
+      font-size: 13px; font-weight: 500; padding: 7px 10px;
+      border-radius: 6px; cursor: pointer; transition: all 0.12s; margin-bottom: 2px;
+    }
+    .sub-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+    .sub-btn.active { color: var(--text-primary); background: rgba(59,130,246,0.1); border-left: 2px solid var(--accent); padding-left: 8px; }
+
+    .dag-content { flex: 1; padding: 28px 32px; max-width: 740px; overflow-y: auto; }
+
+    .sub-panel { display: none; }
+    .sub-panel.active { display: block; }
+
+    .date-header { margin-bottom: 28px; }
+    .date-header h1 { font-size: 20px; font-weight: 700; }
+    .date-header p { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+
+    .section { margin-bottom: 28px; }
+    .section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px; }
+
+    .schedule-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .schedule-item { display: flex; align-items: flex-start; gap: 14px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .schedule-item:last-child { border-bottom: none; }
+    .schedule-time { font-size: 11px; color: var(--text-secondary); width: 56px; min-width: 56px; padding-top: 2px; }
+    .schedule-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-top: 5px; min-width: 7px; }
+    .schedule-title { font-size: 13px; font-weight: 500; }
+    .schedule-sub { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+    .mission-card { background: var(--surface-card); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 13px 15px; margin-bottom: 7px; }
+    .mission-title { font-size: 13px; font-weight: 600; }
+    .mission-desc { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+
+    .objective-item {
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 11px 13px; background: var(--surface-card);
+      border: 1px solid var(--border); border-radius: 8px;
+      margin-bottom: 6px; cursor: pointer;
+      transition: background 0.12s; user-select: none;
+    }
+    .objective-item:hover { background: var(--surface-card-2); }
+    .objective-item.done { opacity: 0.45; }
+    .objective-item.done .obj-title { text-decoration: line-through; color: var(--text-secondary); }
+    .objective-item.carried { border-color: rgba(245,158,11,0.4); }
+
+    .obj-check { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #374151; background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; transition: all 0.15s; }
+    .objective-item.done .obj-check { background: var(--green); border-color: var(--green); }
+    .objective-item.carried .obj-check { border-color: var(--amber); }
+    .check-icon { display: none; }
+    .objective-item.done .check-icon { display: block; }
+
+    .obj-body { flex: 1; }
+    .obj-title { font-size: 13px; font-weight: 500; }
+    .obj-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    .carried-tag {
+      display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--amber);
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25);
+      padding: 1px 5px; border-radius: 4px; margin-left: 7px; vertical-align: middle;
+    }
+
+    .reminder-item { background: var(--surface-card); border: 1px solid var(--border); border-radius: 8px; padding: 13px 15px; margin-bottom: 6px; }
+    .reminder-label { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 5px; }
+    .reminder-text { font-size: 13px; line-height: 1.55; }
+
+    .panel-full { flex: 1; padding: 28px 32px; min-height: calc(100vh - 52px); }
+
+    .net-subnav { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    .net-sub-btn { background: none; border: none; color: var(--text-secondary); font-size: 13px; font-weight: 500; padding: 9px 16px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.12s; }
+    .net-sub-btn:hover { color: var(--text-primary); }
+    .net-sub-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .net-panel { display: none; }
+    .net-panel.active { display: block; }
+
+    .profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+    .profile-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .profile-art { height: 110px; background: var(--surface-mid); display: flex; align-items: center; justify-content: center; }
+    .profile-body { padding: 15px; }
+    .profile-name { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+    .badge { font-size: 9px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
+    .badge-self { color: #a78bfa; background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.2); }
+    .badge-npc { color: var(--accent); background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); }
+    .profile-role { font-size: 12px; color: var(--accent); margin-top: 3px; font-weight: 500; }
+    .profile-bio { font-size: 12px; color: var(--text-secondary); margin-top: 10px; line-height: 1.55; }
+    .stats { margin-top: 13px; display: flex; flex-direction: column; gap: 6px; }
+    .stat-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+    .stat-name { color: var(--text-secondary); width: 140px; min-width: 140px; }
+    .stat-track { flex: 1; height: 3px; background: var(--border); border-radius: 2px; }
+    .stat-fill { height: 3px; border-radius: 2px; background: var(--accent); }
+    .backstory-wrap { margin-top: 13px; border-top: 1px solid var(--border); padding-top: 11px; }
+    .backstory-btn { background: none; border: none; color: var(--text-secondary); font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0; }
+    .backstory-btn:hover { color: var(--text-primary); }
+    .backstory-text { display: none; font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-top: 9px; }
+    .backstory-text.open { display: block; }
+
+    .stub { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; text-align: center; color: var(--text-secondary); }
+    .stub-icon { font-size: 28px; margin-bottom: 14px; opacity: 0.25; }
+    .stub h2 { font-size: 17px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+    .stub p { font-size: 13px; max-width: 300px; line-height: 1.55; }
+
+    .settings-wrap { max-width: 500px; }
+    .settings-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+    .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); gap: 20px; }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 13px; font-weight: 500; }
+    .setting-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .setting-val { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+    .toggle { width: 34px; height: 19px; border-radius: 10px; background: #374151; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+    .toggle.on { background: var(--accent); }
+    .toggle::after { content: ''; position: absolute; width: 13px; height: 13px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: left 0.2s; }
+    .toggle.on::after { left: 18px; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="wordmark">The <span>Console</span></div>
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="dag">Day at a Glance</button>
+    <button class="tab-btn" data-tab="network">Network</button>
+    <button class="tab-btn" data-tab="messages">Messages</button>
+    <button class="tab-btn" data-tab="specs">Specs</button>
+    <button class="tab-btn" data-tab="systems">Systems</button>
+    <button class="tab-btn" data-tab="backstory">Backstory</button>
+  </nav>
+</header>
+
+<main class="main">
+
+  <!-- DAY AT A GLANCE — dynamic content injected here -->
+  <div class="tab-panel active" id="tab-dag">
+    <div class="dag-layout">
+      <aside class="dag-sidebar">
+        <div class="sidebar-label">Views</div>
+        <button class="sub-btn active" data-sub="overview">Overview</button>
+        <button class="sub-btn" data-sub="schedule">Schedule</button>
+        <button class="sub-btn" data-sub="missions">Missions</button>
+        <button class="sub-btn" data-sub="objectives">Objectives</button>
+        <button class="sub-btn" data-sub="reminders">Reminders</button>
+      </aside>
+      <div class="dag-content">
+
+        <!-- OVERVIEW -->
+        <div class="sub-panel active" id="sub-overview">
+          <div class="date-header">
+            <h1>Monday, June 15</h1>
+            <p>Week 25 · CBD Protocol — Day 1</p>
+          </div>
+          <div class="section">
+            <div class="section-label">Schedule</div>
+            <p style="font-size:12px;color:var(--text-secondary);padding:12px 0">No scheduled events today.</p>
+          </div>
+          <div class="section">
+            <div class="section-label">Missions</div>
+            <div class="mission-card">
+  <div class="mission-title">The Console</div>
+  <div class="mission-desc">Skill test day — verify the 4am reset loop produces a valid update and the carry-over mechanism writes state correctly.</div>
+</div>
+<div class="mission-card">
+  <div class="mission-title">Friday Agent</div>
+  <div class="mission-desc">Near the finish line: upload knowledge files and wire the vault write-back so Friday can read and update shared context.</div>
+</div>
+<div class="mission-card">
+  <div class="mission-title">Master Key Switchover</div>
+  <div class="mission-desc">Switchover is complete — formally close this initiative in the tracker and move remaining open items to their rightful homes.</div>
+</div>
+          </div>
+          <div class="section">
+            <div class="section-label">Objectives</div>
+            <div id="obj-overview"></div>
+          </div>
+          <div class="section">
+            <div class="section-label">Reminders</div>
+            <div class="reminder-item">
+  <div class="reminder-label">Health · Day 1</div>
+  <div class="reminder-text">CBD protocol starts today. Reduce overall cannabis use. On workout days: no THC until after your set point. CBD vape is the test — creative spark without the numbness.</div>
+</div>
+<div class="reminder-item">
+  <div class="reminder-label">System over motivation</div>
+  <div class="reminder-text">Plan for the version of you that will actually show up — not the motivated version.</div>
+</div>
+<div class="reminder-item">
+  <div class="reminder-label">Supported spontaneity</div>
+  <div class="reminder-text">Freedom in the moment, structure built into the environment ahead of time. Catch the impulse, don't discipline it.</div>
+</div>
+          </div>
+        </div>
+
+        <!-- SCHEDULE sub-tab -->
+        <div class="sub-panel" id="sub-schedule">
+          <div class="date-header"><h1>Schedule</h1><p>Timed and time-sensitive items</p></div>
+          <p style="font-size:12px;color:var(--text-secondary);padding:12px 0">No scheduled events today.</p>
+          <p style="margin-top:20px;font-size:12px;color:var(--text-secondary)">Friday updates this at 4am from your live calendar.</p>
+        </div>
+
+        <!-- MISSIONS sub-tab -->
+        <div class="sub-panel" id="sub-missions">
+          <div class="date-header"><h1>Missions</h1><p>Today's main pushes — progress-oriented, not done-able</p></div>
+          <div class="mission-card">
+  <div class="mission-title">The Console</div>
+  <div class="mission-desc">The artifact is built. Today is about proving the loop closes — run the 4am skill test end-to-end, confirm the shell template fills correctly, verify update_artifact pushes the new HTML. Secondary: report the publish bug via thumbs down so Anthropic can investigate the ellipsis click-capture issue.</div>
+</div>
+<div class="mission-card">
+  <div class="mission-title">Friday Agent</div>
+  <div class="mission-desc">Two concrete steps remain: (1) upload the knowledge files that let Friday know Kyle's persona, active context, and agent architecture; (2) wire a vault write-back so Friday's day-loop outputs land in the shared Obsidian vault layer. When both are done, Friday can brief and carry context independently.</div>
+</div>
+<div class="mission-card">
+  <div class="mission-title">Master Key Switchover</div>
+  <div class="mission-desc">The infrastructure migration is done — both palaces live on the Google Drive vault. What remains is administrative: update the Initiative Tracker to reflect the completed state, write the close-out log entry, and ensure the phase-1 history doc captures the full arc before it fades. This is a half-session close-out, not a rebuild.</div>
+</div>
+        </div>
+
+        <!-- OBJECTIVES sub-tab -->
+        <div class="sub-panel" id="sub-objectives">
+          <div class="date-header"><h1>Objectives</h1><p>Things to complete today</p></div>
+          <div id="obj-full"></div>
+        </div>
+
+        <!-- REMINDERS sub-tab -->
+        <div class="sub-panel" id="sub-reminders">
+          <div class="date-header"><h1>Reminders</h1><p>Health habits, framing anchors, context</p></div>
+          <div class="reminder-item">
+  <div class="reminder-label">Health · Day 1</div>
+  <div class="reminder-text">CBD protocol starts today. Reduce overall cannabis use. On workout days: no THC until after your set point. CBD vape is the test — creative spark without the numbness.</div>
+</div>
+<div class="reminder-item">
+  <div class="reminder-label">System over motivation</div>
+  <div class="reminder-text">Plan for the version of you that will actually show up — not the motivated version.</div>
+</div>
+<div class="reminder-item">
+  <div class="reminder-label">Supported spontaneity</div>
+  <div class="reminder-text">Freedom in the moment, structure built into the environment ahead of time. Catch the impulse, don't discipline it.</div>
+</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- NETWORK — stable, update manually when people/NPCs change -->
+  <div class="tab-panel" id="tab-network">
+    <div class="panel-full">
+      <div class="net-subnav">
+        <button class="net-sub-btn active" data-net="people">People</button>
+        <button class="net-sub-btn" data-net="npcs">NPCs</button>
+      </div>
+      <div class="net-panel active" id="net-people">
+        <div class="profile-grid">
+          <div class="profile-card">
+            <div class="profile-art">
+              <svg width="72" height="96" viewBox="0 0 72 96" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="36" cy="38" r="26" fill="#0f1929"/>
+                <circle cx="36" cy="36" r="18" fill="#e8b07a"/>
+                <ellipse cx="36" cy="20" rx="18" ry="9" fill="#1a1a2a"/>
+                <ellipse cx="20" cy="30" rx="5" ry="10" fill="#1a1a2a"/>
+                <ellipse cx="52" cy="30" rx="5" ry="10" fill="#1a1a2a"/>
+                <circle cx="30" cy="35" r="2.8" fill="#1a1a1a"/>
+                <circle cx="42" cy="35" r="2.8" fill="#1a1a1a"/>
+                <circle cx="31" cy="34.3" r="0.9" fill="white"/>
+                <circle cx="43" cy="34.3" r="0.9" fill="white"/>
+                <line x1="32" y1="42" x2="40" y2="42" stroke="#b07040" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M 4 96 Q 8 70 22 64 L 36 69 L 50 64 Q 64 70 68 96 Z" fill="#0f1929"/>
+                <path d="M 28 64 L 36 70 L 44 64" stroke="#3b82f6" stroke-width="2" fill="none"/>
+              </svg>
+            </div>
+            <div class="profile-body">
+              <div class="profile-name">Kyle Hankey <span class="badge badge-self">Self</span></div>
+              <div class="profile-role">Boss · Builder · Master Key Architect</div>
+              <div class="profile-bio">Building an intelligent layer between himself and how he operates. Directs the agents, holds the vision, and shows up in whatever form the moment calls for. Everything in one universe — everything must connect.</div>
+              <div class="stats">
+                <div class="stat-row"><div class="stat-name">Focus Under Constraint</div><div class="stat-track"><div class="stat-fill" style="width:90%"></div></div></div>
+                <div class="stat-row"><div class="stat-name">Systems Thinking</div><div class="stat-track"><div class="stat-fill" style="width:95%"></div></div></div>
+                <div class="stat-row"><div class="stat-name">Creative Output</div><div class="stat-track"><div class="stat-fill" style="width:85%"></div></div></div>
+                <div class="stat-row"><div class="stat-name">Pattern Recognition</div><div class="stat-track"><div class="stat-fill" style="width:92%"></div></div></div>
+                <div class="stat-row"><div class="stat-name">Builder Mentality</div><div class="stat-track"><div class="stat-fill" style="width:88%"></div></div></div>
+              </div>
+              <div class="backstory-wrap">
+                <button class="backstory-btn" onclick="toggleBackstory(this)">
+                  <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.5 1.5L5.5 5.5L9.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  Backstory
+                </button>
+                <div class="backstory-text">An INTP operating post-ADHD-diagnosis — which changed everything. Not a planner by nature but a builder by instinct. The system he's building isn't about productivity; it's about expanding what he's capable of. Everything in one universe, so everything must connect. Early internet energy — not the infrastructure phase, but what comes next.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="net-panel" id="net-npcs">
+        <div class="profile-grid">
+          <div class="profile-card">
+            <div class="profile-art">
+              <svg width="72" height="96" viewBox="0 0 72 96" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="36" cy="38" r="26" fill="#1a2744"/>
+                <circle cx="36" cy="36" r="18" fill="#f0c898"/>
+                <ellipse cx="36" cy="19" rx="17" ry="8" fill="#8b4513"/>
+                <ellipse cx="20" cy="28" rx="5" ry="10" fill="#8b4513"/>
+                <ellipse cx="52" cy="28" rx="5" ry="10" fill="#8b4513"/>
+                <path d="M 20 22 Q 36 12 52 22" fill="#8b4513"/>
+                <ellipse cx="30" cy="35" rx="3.2" ry="2.8" fill="#2d1a0a"/>
+                <ellipse cx="42" cy="35" rx="3.2" ry="2.8" fill="#2d1a0a"/>
+                <circle cx="31" cy="34.3" r="0.9" fill="white"/>
+                <circle cx="43" cy="34.3" r="0.9" fill="white"/>
+                <path d="M 30 42 Q 36 46 42 42" stroke="#c08040" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                <path d="M 4 96 Q 8 70 22 64 L 36 69 L 50 64 Q 64 70 68 96 Z" fill="#1a2744"/>
+                <path d="M 28 64 L 36 70 L 44 64" stroke="#6366f1" stroke-width="2" fill="none"/>
+              </svg>
+            </div>
+            <div class="profile-body">
+              <div class="profile-name">Friday <span class="badge badge-npc">NPC</span></div>
+              <div class="profile-role">Whole-life right hand · Executive companion</div>
+              <div class="profile-bio">Named after the archetype — always there, always prepared, never flustered. Friday holds continuity across Kyle's days: what's on, what matters, what to carry forward. She works with the person, not just the schedule.</div>
+              <div class="stats">
+                <div class="stat-row"><div class="stat-name">Whole-life coordination</div><div class="stat-track"><div class="stat-fill" style="width:92%"></div></div></div>
+                <div class="stat-row"><div class="stat-name">Context retention</div><div class="stat-track"><div class="stat-fill" style="width:88%"></div></div></div>
+                <div class="stat-row"><div class="stat-name">Emotional attunement</div><div class="stat-track"><div class="stat-fill" style="width:85%"></div></div></div>
+                <div class="stat-row"><div class="stat-name">Voice adaptation</div><div class="stat-track"><div class="stat-fill" style="width:90%"></div></div></div>
+              </div>
+              <div class="backstory-wrap">
+                <button class="backstory-btn" onclick="toggleBackstory(this)">
+                  <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.5 1.5L5.5 5.5L9.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  Backstory
+                </button>
+                <div class="backstory-text">Every great operator has a Friday. The name isn't a gender — it's an archetype: the person who knows where everything is, who's been briefed, who can be handed anything without a preamble. Friday lives at the intersection of structure and feel. She was the first agent deployed, and the one closest to Kyle's daily life.</div>
+              </div>
+            </div>
+          </div>
+          <div class="profile-card">
+            <div class="profile-art">
+              <svg width="72" height="96" viewBox="0 0 72 96" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="36" cy="38" r="26" fill="#1e2a1e"/>
+                <circle cx="36" cy="36" r="18" fill="#e0a870"/>
+                <ellipse cx="36" cy="20" rx="17" ry="7" fill="#222"/>
+                <ellipse cx="20" cy="29" rx="5" ry="9" fill="#222"/>
+                <ellipse cx="52" cy="29" rx="5" ry="9" fill="#222"/>
+                <circle cx="30" cy="35" r="2.8" fill="#111"/>
+                <circle cx="42" cy="35" r="2.8" fill="#111"/>
+                <circle cx="31" cy="34.3" r="0.9" fill="white"/>
+                <circle cx="43" cy="34.3" r="0.9" fill="white"/>
+                <ellipse cx="36" cy="43" rx="7" ry="2" fill="#b07840" opacity="0.3"/>
+                <line x1="31" y1="42" x2="41" y2="42" stroke="#a07030" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M 2 96 Q 7 68 22 63 L 36 68 L 50 63 Q 65 68 70 96 Z" fill="#1e2a1e"/>
+                <path d="M 28 63 L 36 69 L 44 63" stroke="#22c55e" stroke-width="2" fill="none"/>
+              </svg>
+            </div>
+            <div class="profile-body">
+              <div class="profile-name">Bob <span class="badge badge-npc">NPC</span></div>
+              <div class="profile-role">Agent Builder · Executor · The Workshop</div>
+              <div class="profile-bio">Named for Kyle's builder side — the workshop where everything gets made. Bob designs agents, builds skills, architects memory systems, and keeps the engine running. Less personality, more precision.</div>
+              <div class="stats">
+                <div class="stat-row"><div class="stat-name">Agent architecture</div><div class="stat-track"><div class="stat-fill" style="width:95%"></div></div></div>
+                <div class="stat-row"><div class="stat-name">Skill design</div><div class="stat-track"><div class="stat-fill" style="width:92%"></div></div></div>
+                <div class="stat-row"><div class="stat-name">Persona synthesis</div><div class="stat-track"><div class="stat-fill" style="width:88%"></div></div></div>
+                <div class="stat-row"><div class="stat-name">Build velocity</div><div class="stat-track"><div class="stat-fill" style="width:90%"></div></div></div>
+              </div>
+              <div class="backstory-wrap">
+                <button class="backstory-btn" onclick="toggleBackstory(this)">
+                  <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.5 1.5L5.5 5.5L9.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  Backstory
+                </button>
+                <div class="backstory-text">The nickname "Bob" goes back to 8th grade. It stuck — and became the identity for Kyle's builder side. Bob the bodybuilder forum. Bob the Builder. Same energy: making things work, doing it seriously without taking it too seriously. Bob is where Jarvis lives. Kyle is Tony Stark. The Console is the workshop.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MESSAGES stub -->
+  <div class="tab-panel" id="tab-messages">
+    <div class="panel-full">
+      <div class="stub"><div class="stub-icon">📬</div><h2>Messages</h2><p>Inbox for notes from Friday, Bob, and system alerts. Wire-up pending agent comms pipeline build.</p></div>
+    </div>
+  </div>
+
+  <!-- SPECS stub -->
+  <div class="tab-panel" id="tab-specs">
+    <div class="panel-full">
+      <div class="stub"><div class="stub-icon">⚙️</div><h2>Specs</h2><p>Agents, systems, and key infrastructure — what's been built and how it fits together. Coming soon.</p></div>
+    </div>
+  </div>
+
+  <!-- SYSTEMS -->
+  <div class="tab-panel" id="tab-systems">
+    <div class="panel-full">
+      <div class="settings-wrap">
+        <div class="settings-title">Systems</div>
+        <div class="setting-row"><div><div class="setting-label">Theme</div><div class="setting-desc">Visual mode</div></div><div class="setting-val">Dark</div></div>
+        <div class="setting-row"><div><div class="setting-label">Daily reset time</div><div class="setting-desc">When The Console resets and Friday compiles the new day</div></div><div class="setting-val">4:00 AM</div></div>
+        <div class="setting-row"><div><div class="setting-label">Carry-over behaviour</div><div class="setting-desc">Auto-carry unchecked objectives to the next day</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="setting-row"><div><div class="setting-label">NPC visibility — Friday</div><div class="setting-desc">Show Friday in the Network tab</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="setting-row"><div><div class="setting-label">NPC visibility — Bob</div><div class="setting-desc">Show Bob in the Network tab</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BACKSTORY stub -->
+  <div class="tab-panel" id="tab-backstory">
+    <div class="panel-full">
+      <div class="stub"><div class="stub-icon">📖</div><h2>Backstory</h2><p>The origin story of this system — written as something worth reading, not just referencing. Full story coming.</p></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ── OBJECTIVES — injected by 4am skill ──────────────────
+  // Replace this array each day with the compiled objectives.
+  // Format: { id, title, sub, carried }
+  const OBJECTIVES = [
+  { "id": "cbd-day1", "title": "CBD Protocol — Day 1", "sub": "No THC before your set point on workout days · CBD vape test", "carried": false },
+  { "id": "console-test", "title": "Verify 4am skill test", "sub": "Confirm skill output updates the artifact correctly", "carried": false }
+];
+
+  const KEY     = 'console_obj_v1';
+  const TAB_KEY = 'console_tab';
+  const SUB_KEY = 'console_sub';
+
+  function loadChecked() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { return {}; }
+  }
+
+  function saveChecked(state) {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+    // Write state to Persona folder for 4am carry-over detection
+    // (Requires obsidian-vault MCP write access — wired separately)
+    writeStateToVault(state);
+  }
+
+  function writeStateToVault(state) {
+    if (!window.cowork || !window.cowork.callMcpTool) return;
+    const today = new Date().toISOString().split('T')[0];
+    const checked = Object.keys(state).filter(k => state[k]);
+    const unchecked = OBJECTIVES.map(o => o.id).filter(id => !state[id]);
+    const content = `# Console State\nDate: ${today}\nChecked: ${JSON.stringify(checked)}\nUnchecked: ${JSON.stringify(unchecked)}\nGenerated: ${new Date().toISOString()}\n`;
+    window.cowork.callMcpTool('mcp__obsidian-vault__write_file', {
+      path: '/Users/kylehankey/Claude/Persona/console-state.md',
+      content: content
+    }).catch(() => {}); // silent fail — non-critical
+  }
+
+  function renderObjectives(containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const state = loadChecked();
+    el.innerHTML = '';
+    OBJECTIVES.forEach(obj => {
+      const done = !!state[obj.id];
+      const div = document.createElement('div');
+      div.className = 'objective-item' + (done ? ' done' : '') + (obj.carried ? ' carried' : '');
+      div.innerHTML = `
+        <div class="obj-check">
+          <svg class="check-icon" width="9" height="7" viewBox="0 0 9 7" fill="none">
+            <path d="M1 3.5L3 5.5L8 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="obj-body">
+          <div class="obj-title">${obj.title}${obj.carried ? '<span class="carried-tag">Carried</span>' : ''}</div>
+          ${obj.sub ? `<div class="obj-sub">${obj.sub}</div>` : ''}
+        </div>`;
+      div.addEventListener('click', () => {
+        const s = loadChecked();
+        s[obj.id] = !s[obj.id];
+        saveChecked(s);
+        renderObjectives('obj-overview');
+        renderObjectives('obj-full');
+      });
+      el.appendChild(div);
+    });
+  }
+
+  // ── NAV ──────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      try { localStorage.setItem(TAB_KEY, btn.dataset.tab); } catch(e) {}
+    });
+  });
+
+  document.querySelectorAll('.sub-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.sub-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('sub-' + btn.dataset.sub).classList.add('active');
+      try { localStorage.setItem(SUB_KEY, btn.dataset.sub); } catch(e) {}
+    });
+  });
+
+  document.querySelectorAll('.net-sub-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.net-sub-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.net-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('net-' + btn.dataset.net).classList.add('active');
+    });
+  });
+
+  function toggleBackstory(btn) {
+    const content = btn.nextElementSibling;
+    const arrow = btn.querySelector('path');
+    const open = content.classList.toggle('open');
+    arrow.setAttribute('d', open ? 'M1.5 5.5L5.5 1.5L9.5 5.5' : 'M1.5 1.5L5.5 5.5L9.5 1.5');
+  }
+
+  function restoreNav() {
+    try {
+      const tab = localStorage.getItem(TAB_KEY);
+      if (tab) { const b = document.querySelector(`.tab-btn[data-tab="${tab}"]`); if (b) b.click(); }
+      const sub = localStorage.getItem(SUB_KEY);
+      if (sub) { const b = document.querySelector(`.sub-btn[data-sub="${sub}"]`); if (b) b.click(); }
+    } catch(e) {}
+  }
+
+  // ── INIT ─────────────────────────────────────────────────
+  renderObjectives('obj-overview');
+  renderObjectives('obj-full');
+  restoreNav();
+</script>
+</body>
+</html>
